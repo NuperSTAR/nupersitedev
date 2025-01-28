@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: rgba(17, 17, 17, 0.8);
+            --text-color: #ffffff;
+            --border-color: #333333;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            font-family: 'Lexend', sans-serif;
+            color: var(--text-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .background-container embed {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #modal-root, #proxy-modal-root {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 999999;
+        }
+
+        .blur-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000000;
+        }
+
+        .notice-container {
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            z-index: 1000001;
+        }
+
+        .notice-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .notice-content {
+            font-size: 1rem;
+            font-weight: 300;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-container label {
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .continue-btn {
+            background: #3B82F6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-family: 'Lexend', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            width: 100%;
+        }
+
+        .continue-btn:hover {
+            background: #2563EB;
+        }
+
+        .link-btn {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-family: 'Lexend', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .link-btn:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-container">
+        <embed src="https://5djkhg-5000.csb.app" type="text/html">
+    </div>
+    <div id="modal-root">
+        <div class="blur-overlay" id="noticeOverlay">
+            <div class="notice-container" id="noticeContainer">
+                <h2 class="notice-title">Important Notice</h2>
+                <p class="notice-content">
+                    Welcome to nupersitedev.xyz! This leads to the website of the devlopment of NuperSITE, without going to different websites! Please note, that uses codesandbox, so some issues might occur. This website will also be updated if there any bugs around. If your ever been here only once, then it will show a pop up if you want to show the preview, click on "Yes, proceed to preview", and it will show! If you clicked the dont show again, and go back again, and it shows for a split second, dont worry! Its checking, it will show later.
+                </p>
+                <br>
+                <p class="notice-content">
+                    Anyways, have fun checking out the development of NuperSITE, and make sure to click on Don't show again!
+                </p>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="dontShow">
+                    <label for="dontShow">Don't show again</label>
+                </div>
+                <button class="continue-btn" onclick="handleContinue()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Proxy Alert Modal -->
+    <div id="proxy-modal-root" style="display: none;">
+        <div class="blur-overlay" id="proxyNoticeOverlay">
+            <div class="notice-container" id="proxyNoticeContainer">
+                <h2 class="notice-title">Proxy Detected</h2>
+                <p class="notice-content">
+                    It seems you're using a proxy (e.g., Doge Unblocker). Sometimes it doesnt work, but to keep making sure no issue comes up, I recommend you click on the "Continue" button. Also if it shows the html when you click continue, refresh!
+                </p>
+                <button class="link-btn" onclick="window.location.href='https://5djkhg-5000.csb.app'">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to check if modal should be displayed
+        window.onload = function() {
+            if (localStorage.getItem('dontShowAgain') === 'true') {
+                document.getElementById('modal-root').style.display = 'none';
+            }
+
+            // Check IP address
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    const userIp = data.ip;
+                    if (userIp === '163.123.192.252') {
+                        document.getElementById('proxy-modal-root').style.display = 'flex'; // Show proxy modal
+                    }
+                })
+                .catch(error => console.log('Error fetching IP address:', error));
+        };
+
+        // Function to handle the "Don't show again" checkbox and hide the modal
+        function handleContinue() {
+            const dontShow = document.getElementById('dontShow').checked;
+            if (dontShow) {
+                localStorage.setItem('dontShowAgain', 'true');
+            }
+            document.getElementById('modal-root').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
