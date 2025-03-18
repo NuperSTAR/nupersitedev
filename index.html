@@ -30,13 +30,13 @@
             z-index: 1;
         }
 
-        .background-container embed {
+        .background-container iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
 
-        #modal-root, #proxy-modal-root {
+        #modal-root {
             position: fixed;
             top: 0;
             left: 0;
@@ -119,51 +119,55 @@
             background: #2563EB;
         }
 
-        .link-btn {
-            background: #2563EB;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-family: 'Lexend', sans-serif;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            width: 100%;
+        .loading-indicator {
+            display: none;
+            text-align: center;
             margin-top: 1rem;
         }
 
-        .link-btn:hover {
-            background: #1d4ed8;
+        .loading-indicator .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="background-container">
-        <embed src="https://5djkhg-5000.csb.app" type="text/html">
+        <iframe id="contentFrame" src="about:blank" allow="fullscreen"></iframe>
     </div>
     <div id="modal-root">
         <div class="blur-overlay" id="noticeOverlay">
             <div class="notice-container" id="noticeContainer">
-                <h2 class="notice-title">Important Notice</h2>
+                <h2 class="notice-title">Welcome to NuperSITE</h2>
                 <p class="notice-content">
-                    Welcome to nupersitedev.xyz! This leads to the website of the devlopment of NuperSITE, without going to different websites! Please note, that uses codesandbox, so some issues might occur. This website will also be updated if there any bugs around. If your ever been here only once, then it will show a pop up if you want to show the preview, click on "Yes, proceed to preview", and it will show! If you clicked the dont show again, and go back again, and it shows for a split second, dont worry! Its checking, it will show later.
+                    Welcome to nupersitedev.xyz! This page shows the development of NuperSITE without requiring you to visit multiple websites. Please note that it uses CodeSandbox, so some issues might occur. We'll update this site if any bugs are found.
                 </p>
-                <br>
                 <p class="notice-content">
-                    Anyways, have fun checking out the development of NuperSITE, and make sure to click on Don't show again!
+                    If this is your first visit, you'll see this welcome message. Click "Continue" to proceed to the preview. If you select "Don't show again," this message won't appear on future visits.
                 </p>
                 <div class="checkbox-container">
                     <input type="checkbox" id="dontShow">
                     <label for="dontShow">Don't show again</label>
                 </div>
-                <button class="continue-btn" onclick="handleContinue()">Continue</button>
+                <button class="continue-btn" id="continueBtn" onclick="handleContinue()">Continue</button>
+                <div class="loading-indicator" id="loadingIndicator">
+                    <span class="spinner"></span> Loading preview...
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Proxy Alert Modal -->
-    <div id="proxy-modal-root" style="display: none;">
+        
+            <div id="proxy-modal-root" style="display: none;">
         <div class="blur-overlay" id="proxyNoticeOverlay">
             <div class="notice-container" id="proxyNoticeContainer">
                 <h2 class="notice-title">Proxy Detected</h2>
@@ -173,35 +177,252 @@
                 <button class="link-btn" onclick="window.location.href='https://5djkhg-5000.csb.app'">Continue</button>
             </div>
         </div>
+        
     </div>
 
     <script>
-        // Function to check if modal should be displayed
-        window.onload = function() {
-            if (localStorage.getItem('dontShowAgain') === 'true') {
-                document.getElementById('modal-root').style.display = 'none';
-            }
+// Configuration - makes it easy to update settings
+const CONFIG = {
+    contentUrl: "https://j7wyrk-5000.csb.app/",
+    localStorageKey: "modalPreferences",
+    // List of special IP addresses and their corresponding actions
+    specialIpAddresses: {
+        "163.123.192.252": { modalId: "proxy-modal-root", action: "showProxyModal" },
+        "172.96.141.252": { modalId: "proxy-modal-root", action: "showProxyModal" },
+        "104.243.38.142": { modalId: "proxy-modal-root", action: "showProxyModal" },
+        // Add more IP addresses as needed
+    },
+    ipRanges: [
+        { range: "192.168.0.0/16", modalId: "local-network-modal-root", action: "showLocalNetworkModal" },
+        { range: "10.0.0.0/8", modalId: "corporate-modal-root", action: "showCorporateModal" },
+        // Add more ranges as needed
+    ],
+    loadDelay: 500,
+    ipApiUrl: "https://api.ipify.org?format=json",
+    loadTimeout: 10000 // 10 seconds timeout for content loading
+};
 
-            // Check IP address
-            fetch('https://api.ipify.org?format=json')
-                .then(response => response.json())
-                .then(data => {
-                    const userIp = data.ip;
-                    if (userIp === '163.123.192.252') {
-                        document.getElementById('proxy-modal-root').style.display = 'flex'; // Show proxy modal
-                    }
-                })
-                .catch(error => console.log('Error fetching IP address:', error));
-        };
-
-        // Function to handle the "Don't show again" checkbox and hide the modal
-        function handleContinue() {
-            const dontShow = document.getElementById('dontShow').checked;
-            if (dontShow) {
-                localStorage.setItem('dontShowAgain', 'true');
-            }
-            document.getElementById('modal-root').style.display = 'none';
+// Function to handle all DOM element queries - caches results for better performance
+const DOM = {
+    elements: {},
+    get: function(id) {
+        if (!this.elements[id]) {
+            this.elements[id] = document.getElementById(id);
         }
+        return this.elements[id];
+    }
+};
+
+// Better error handling and logging function
+function logError(message, error) {
+    console.error(`${message}:`, error);
+    // Could integrate with error tracking service here
+}
+
+// Handle localStorage safely with proper error handling
+const Storage = {
+    get: function(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            logError("LocalStorage get failed", e);
+            return null;
+        }
+    },
+    set: function(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            logError("LocalStorage set failed", e);
+            return false;
+        }
+    }
+};
+
+// Function to check if an IP is in a CIDR range
+function isIpInRange(ip, cidr) {
+    // This is a simplified implementation - for production, use a proper IP library
+    const [rangeIp, bits] = cidr.split('/');
+    const ipParts = ip.split('.').map(Number);
+    const rangeIpParts = rangeIp.split('.').map(Number);
+    
+    const mask = ~((1 << (32 - parseInt(bits))) - 1);
+    
+    let ipNum = 0;
+    let rangeIpNum = 0;
+    
+    for (let i = 0; i < 4; i++) {
+        ipNum = (ipNum << 8) + ipParts[i];
+        rangeIpNum = (rangeIpNum << 8) + rangeIpParts[i];
+    }
+    
+    return (ipNum & mask) === (rangeIpNum & mask);
+}
+
+// Function to check user's IP and determine which modal to show
+function checkUserIp() {
+    return fetch(CONFIG.ipApiUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network error: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const userIp = data.ip;
+            
+            // Check exact IP matches
+            if (CONFIG.specialIpAddresses[userIp]) {
+                return CONFIG.specialIpAddresses[userIp];
+            }
+            
+            // Check IP ranges
+            for (const range of CONFIG.ipRanges) {
+                if (isIpInRange(userIp, range.range)) {
+                    return range;
+                }
+            }
+            
+            // No matches found, return null
+            return null;
+        })
+        .catch(error => {
+            logError("Error fetching IP address", error);
+            return null;
+        });
+}
+
+// Function to handle different modal actions
+function handleIpAction(ipConfig) {
+    if (!ipConfig) return;
+    
+    // Show the appropriate modal
+    if (ipConfig.modalId && DOM.get(ipConfig.modalId)) {
+        DOM.get(ipConfig.modalId).style.display = 'flex';
+    }
+    
+    // Execute any additional actions
+    if (ipConfig.action === "showProxyModal") {
+        console.log("Proxy IP detected");
+        // Additional proxy-specific actions here
+    } else if (ipConfig.action === "showVpnModal") {
+        console.log("VPN IP detected");
+        // Additional VPN-specific actions here
+    } else if (ipConfig.action === "showLocalModal") {
+        console.log("Local IP detected");
+        // Additional local-specific actions here
+    } else if (ipConfig.action === "showLocalNetworkModal") {
+        console.log("Local network IP detected");
+        // Additional local network-specific actions here
+    } else if (ipConfig.action === "showCorporateModal") {
+        console.log("Corporate network IP detected");
+        // Additional corporate network-specific actions here
+    }
+    
+    // You can add custom event triggers here
+    const event = new CustomEvent('ipActionTriggered', { detail: ipConfig });
+    document.dispatchEvent(event);
+}
+
+// Function to load content with timeout and better error handling
+function loadContent() {
+    const contentFrame = DOM.get('contentFrame');
+    
+    // Create loading timeout
+    const loadingTimeout = setTimeout(() => {
+        logError("Content loading timed out", "Redirecting to direct URL");
+        window.location.href = CONFIG.contentUrl;
+    }, CONFIG.loadTimeout);
+    
+    // Set up event listeners for iframe
+    contentFrame.onload = function() {
+        clearTimeout(loadingTimeout);
+    };
+    
+    contentFrame.onerror = function(e) {
+        clearTimeout(loadingTimeout);
+        logError("Failed to load the content", e);
+        window.location.href = CONFIG.contentUrl;
+    };
+    
+    contentFrame.src = CONFIG.contentUrl;
+}
+
+// Function to handle the "Don't show again" checkbox and hide the modal
+function handleContinue() {
+    const continueBtn = DOM.get('continueBtn');
+    const loadingIndicator = DOM.get('loadingIndicator');
+    
+    // Show loading indicator
+    continueBtn.disabled = true;
+    loadingIndicator.style.display = 'block';
+    
+    // Save preference - store as JSON object for future extensibility
+    const dontShow = DOM.get('dontShow').checked;
+    const preferences = { 
+        dontShowAgain: dontShow,
+        lastAccessed: new Date().toISOString()
+    };
+    
+    if (dontShow) {
+        Storage.set(CONFIG.localStorageKey, JSON.stringify(preferences));
+    }
+    
+    // Load content and hide modal
+    loadContent();
+    
+    // Hide all modals after a short delay to allow the iframe to start loading
+    setTimeout(() => {
+        // Hide the main modal
+        DOM.get('modal-root').style.display = 'none';
+        
+        // Also hide any special IP modals that might be showing
+        Object.values(CONFIG.specialIpAddresses).forEach(config => {
+            if (config.modalId && DOM.get(config.modalId)) {
+                DOM.get(config.modalId).style.display = 'none';
+            }
+        });
+        
+        // Hide any range-based modals
+        CONFIG.ipRanges.forEach(range => {
+            if (range.modalId && DOM.get(range.modalId)) {
+                DOM.get(range.modalId).style.display = 'none';
+            }
+        });
+    }, CONFIG.loadDelay);
+}
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check if we should show the modal
+    let shouldShowModal = true;
+    
+    try {
+        const preferences = JSON.parse(Storage.get(CONFIG.localStorageKey) || '{}');
+        if (preferences.dontShowAgain === true) {
+            shouldShowModal = false;
+        }
+    } catch (e) {
+        logError("Error parsing preferences", e);
+    }
+    
+    // If modal should be hidden, load content right away
+    if (!shouldShowModal) {
+        DOM.get('modal-root').style.display = 'none';
+        loadContent();
+        return;
+    }
+    
+    // Check user IP and handle appropriate action
+    const ipConfig = await checkUserIp();
+    if (ipConfig) {
+        handleIpAction(ipConfig);
+    }
+    
+    // Set up event listeners
+    DOM.get('continueBtn').addEventListener('click', handleContinue);
+});
     </script>
 </body>
 </html>
