@@ -9,6 +9,11 @@
             --bg-color: rgba(17, 17, 17, 0.8);
             --text-color: #ffffff;
             --border-color: #333333;
+            --primary-blue: #3B82F6;
+            --primary-blue-hover: #2563EB;
+            --danger-color: #EF4444;
+            --warning-color: #F59E0B;
+            --success-color: #10B981;
         }
 
         body, html {
@@ -36,7 +41,10 @@
             border: none;
         }
 
-        #modal-root {
+        #modal-root, 
+        #proxy-modal-root,
+        #local-network-modal-root,
+        #corporate-modal-root {
             position: fixed;
             top: 0;
             left: 0;
@@ -102,8 +110,8 @@
             cursor: pointer;
         }
 
-        .continue-btn {
-            background: #3B82F6;
+        .continue-btn, .link-btn {
+            background: var(--primary-blue);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -111,12 +119,51 @@
             font-family: 'Lexend', sans-serif;
             font-size: 1rem;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, transform 0.2s ease;
             width: 100%;
         }
 
-        .continue-btn:hover {
-            background: #2563EB;
+        .continue-btn:hover, .link-btn:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+        }
+
+        .continue-btn:active, .link-btn:active {
+            transform: translateY(0);
+        }
+
+        .continue-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .link-btn {
+            margin-top: 1rem;
+        }
+
+        /* Variant button styles */
+        .btn-warning {
+            background: var(--warning-color);
+        }
+
+        .btn-warning:hover {
+            background: #D97706;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background: #059669;
         }
 
         .loading-indicator {
@@ -137,8 +184,121 @@
             margin-right: 8px;
         }
 
+        /* Special modal styles */
+        .proxy-notice {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .local-network-notice {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .corporate-notice {
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        /* Modal icon styles */
+        .modal-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Button group for multiple actions */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn-group button {
+            flex: 1;
+        }
+
+        /* Toast notification for messages */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1rem;
+            z-index: 1000010;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            max-width: 90%;
+            width: 320px;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .toast-close {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animation keyframes */
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Apply animations to elements */
+        .notice-container {
+            animation: slideIn 0.3s ease forwards;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .notice-container {
+                padding: 1.5rem;
+            }
+
+            .notice-title {
+                font-size: 1.25rem;
+            }
+
+            .notice-content {
+                font-size: 0.9rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -166,18 +326,57 @@
                 </div>
             </div>
         </div>
-        
-            <div id="proxy-modal-root" style="display: none;">
+    </div>
+
+    <!-- Proxy Modal -->
+    <div id="proxy-modal-root" style="display: none;">
         <div class="blur-overlay" id="proxyNoticeOverlay">
-            <div class="notice-container" id="proxyNoticeContainer">
+            <div class="notice-container proxy-notice" id="proxyNoticeContainer">
                 <h2 class="notice-title">Proxy Detected</h2>
                 <p class="notice-content">
-                    It seems you're using a proxy (e.g., Doge Unblocker). Sometimes it doesnt work, but to keep making sure no issue comes up, I recommend you click on the "Continue" button. Also if it shows the html when you click continue, refresh!
+                    It seems you're using a proxy (e.g., Doge Unblocker). Sometimes it doesn't work properly. To ensure the best experience, we recommend clicking the "Continue" button below.
                 </p>
-                <button class="link-btn" onclick="window.location.href='https://5djkhg-5000.csb.app'">Continue</button>
+                <p class="notice-content">
+                    If you see HTML code after clicking continue, please refresh the page.
+                </p>
+                <button class="link-btn" onclick="window.location.href='https://j7wyrk-5000.csb.app/'">Continue</button>
             </div>
         </div>
-        
+    </div>
+
+    <!-- Local Network Modal -->
+    <div id="local-network-modal-root" style="display: none;">
+        <div class="blur-overlay">
+            <div class="notice-container local-network-notice">
+                <h2 class="notice-title">Local Network Detected</h2>
+                <p class="notice-content">
+                    It looks like you're accessing this site from a local network. For the best experience, we recommend using a direct internet connection.
+                </p>
+                <div class="btn-group">
+                    <button class="continue-btn btn-success" onclick="handleContinue()">Continue Anyway</button>
+                    <button class="link-btn" onclick="window.location.href='https://j7wyrk-5000.csb.app/'">Direct Access</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Corporate Network Modal -->
+    <div id="corporate-modal-root" style="display: none;">
+        <div class="blur-overlay">
+            <div class="notice-container corporate-notice">
+                <h2 class="notice-title">Corporate Network Detected</h2>
+                <p class="notice-content">
+                    You appear to be on a corporate network. Some features may be limited due to network restrictions. For the complete experience, try accessing from a personal connection.
+                </p>
+                <button class="continue-btn" onclick="handleContinue()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for notifications -->
+    <div class="toast" id="toast" role="alert">
+        <div class="toast-content" id="toastContent"></div>
+        <button class="toast-close" onclick="hideToast()">×</button>
     </div>
 
     <script>
@@ -239,6 +438,24 @@ const Storage = {
         }
     }
 };
+
+// Toast notification system
+function showToast(message, duration = 3000) {
+    const toast = DOM.get('toast');
+    const toastContent = DOM.get('toastContent');
+    
+    toastContent.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        hideToast();
+    }, duration);
+}
+
+function hideToast() {
+    const toast = DOM.get('toast');
+    toast.classList.remove('show');
+}
 
 // Function to check if an IP is in a CIDR range
 function isIpInRange(ip, cidr) {
@@ -332,17 +549,20 @@ function loadContent() {
     // Create loading timeout
     const loadingTimeout = setTimeout(() => {
         logError("Content loading timed out", "Redirecting to direct URL");
+        showToast("Loading timed out, redirecting...");
         window.location.href = CONFIG.contentUrl;
     }, CONFIG.loadTimeout);
     
     // Set up event listeners for iframe
     contentFrame.onload = function() {
         clearTimeout(loadingTimeout);
+        showToast("Content loaded successfully");
     };
     
     contentFrame.onerror = function(e) {
         clearTimeout(loadingTimeout);
         logError("Failed to load the content", e);
+        showToast("Failed to load content, redirecting...");
         window.location.href = CONFIG.contentUrl;
     };
     
